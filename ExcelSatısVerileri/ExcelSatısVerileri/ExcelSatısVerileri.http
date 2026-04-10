@@ -1,0 +1,6 @@
+@ExcelSatısVerileri_HostAddress = http://localhost:5051
+
+GET {{ExcelSatısVerileri_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

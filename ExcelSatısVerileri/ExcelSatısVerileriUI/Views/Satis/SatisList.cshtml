@@ -1,0 +1,193 @@
+﻿@model List<ResultSatisDto>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100vh;
+        background-color: #f5f7fa;
+    }
+
+    .navbar, .card {
+        border-radius: 0; /* Kenarlara kadar tam genişlik için */
+    }
+
+    .card-body, table {
+        width: 100%;
+    }
+</style>
+
+<div class="container-fluid p-0">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#2c3e70;">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/" style="color:white;">📊 SalesInsight</a>
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item px-2"><a class="nav-link active" href="/" style="color:white;">Ana Sayfa</a></li>
+                <li class="nav-item px-2"><a class="nav-link" href="/Satis/UploadExcel" style="color:white;">Excel Yükle</a></li>
+                <li class="nav-item px-2"><a class="nav-link" href="/Raporlar" style="color:white;">Raporlar</a></li>
+                <li class="nav-item px-2"><a class="nav-link" href="/Analiz" style="color:white;">Analiz</a></li>
+                <li class="nav-item px-2 d-flex align-items-center">
+                    <span class="me-2" style="color:white;">👤 @User.Identity?.Name</span>
+                    <a href="/Account/Logout" class="btn btn-sm btn-outline-light">Çıkış</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 🔹 Excel Yükleme -->
+    <div class="p-3">
+        <form asp-controller="Satis" asp-action="UploadExcel" method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+            <input type="file" name="file" class="form-control" />
+            <button type="submit" class="btn btn-light btn-sm fw-semibold">📤 Excel Yükle</button>
+        </form>
+        @if (ViewBag.Message != null)
+        {
+            <div class="alert alert-success mt-2">
+                @ViewBag.Message
+            </div>
+        }
+    </div>
+
+    <!-- Üst Kartlar -->
+    <div class="row g-3 p-3">
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm p-3 w-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small>Toplam Satış</small>
+                        <h5 class="fw-bold">@Model.Sum(x => x.ToplamTutar).ToString("N0") ₺</h5>
+                    </div>
+                    <div>
+                        <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" style="width:40px;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm p-3 w-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small>En Çok Satılan Ürün</small>
+                        @{
+                            var enCokUrun = Model.GroupBy(x => x.UrunAdi)
+                            .OrderByDescending(g => g.Sum(y => y.Adet))
+                            .FirstOrDefault();
+                        }
+                        <h5 class="fw-bold">@enCokUrun?.Key</h5>
+                    </div>
+                    <div>
+                        <img src="https://cdn-icons-png.flaticon.com/512/833/833314.png" style="width:40px;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm p-3 w-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small>En İyi Kategori</small>
+                        @{
+                            var enIyiKategori = Model.GroupBy(x => x.Kategori)
+                            .OrderByDescending(g => g.Sum(y => y.Adet))
+                            .FirstOrDefault();
+                        }
+                        <h5 class="fw-bold">@enIyiKategori?.Key</h5>
+                    </div>
+                    <div>
+                        <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" style="width:40px;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtreleme -->
+    <form method="get" asp-action="SatisList" class="p-3">
+        <div class="row g-2 my-3">
+            <div class="col-md-3">
+                <input type="date" id="startDate" name="startDate" class="form-control" placeholder="Başlangıç Tarihi">
+            </div>
+            <div class="col-md-3">
+                <input type="date" id="endDate" name="endDate" class="form-control" placeholder="Bitiş Tarihi">
+            </div>
+            <div class="col-md-3">
+                <select id="kategoriFilter" name="kategori" class="form-select">
+                    <option value="">Tüm Kategoriler</option>
+                    @foreach (var k in Model.Select(x => x.Kategori).Distinct())
+                    {
+                        <option value="@k">@k</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <input type="text" id="searchBox" name="search" value="@ViewBag.Search" class="form-control" placeholder="Ürün Ara..." autocomplete="off" />
+                <button type="submit" class="btn btn-primary w-100">Ara</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Satış Tablosu -->
+    <div class="card shadow-sm p-3 m-3 w-100">
+        <div class="table-responsive w-100">
+            <table class="table table-hover align-middle w-100">
+                <thead style="background-color:#e8eef7;">
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Ürün Adı</th>
+                        <th>Kategori</th>
+                        <th class="text-center">Adet</th>
+                        <th class="text-end">Birim Fiyat</th>
+                        <th class="text-end">Toplam Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Tarih.ToString("dd.MM.yyyy")</td>
+                            <td>@item.UrunAdi</td>
+                            <td>@item.Kategori</td>
+                            <td class="text-center">@item.Adet</td>
+                            <td class="text-end">@item.BirimFiyat.ToString("N0") ₺</td>
+                            <td class="text-end fw-bold">@item.ToplamTutar.ToString("N0") ₺</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Page navigation example" class="p-3">
+        <ul class="pagination justify-content-center">
+            @if (ViewBag.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-action="SatisList" asp-route-pageNumber="@(ViewBag.CurrentPage - 1)">Önceki</a>
+                </li>
+            }
+
+            @for (int i = 1; i <= ViewBag.TotalPages; i++)
+            {
+                <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                    <a class="page-link" asp-action="SatisList" asp-route-pageNumber="@i">@i</a>
+                </li>
+            }
+
+            @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" asp-action="SatisList" asp-route-pageNumber="@(ViewBag.CurrentPage + 1)">Sonraki</a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+</div>
